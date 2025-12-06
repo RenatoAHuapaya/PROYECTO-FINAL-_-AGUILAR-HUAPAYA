@@ -1,0 +1,31 @@
+---
+title: "SEMANA_2"
+format: html
+editor: visual
+---
+
+## SEMANA 2
+
+```{r}
+library(readr)
+```
+
+```{r}
+library(dplyr)
+```
+
+```{r}
+data <- read_csv("s02_treat_artritis.csv")
+```
+
+```{r}
+head(data)
+```
+
+```{r}
+summary(data)
+```
+
+```{r}
+plot(data)
+```
