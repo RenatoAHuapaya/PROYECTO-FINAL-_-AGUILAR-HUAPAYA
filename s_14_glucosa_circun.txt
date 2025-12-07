@@ -1,0 +1,82 @@
+---
+title: "Análisis de s14_glucosa_circun"
+author: "Generado por ChatGPT"
+date: "`r Sys.Date()`"
+format: html
+execute:
+  echo: true
+  warning: false
+  error: false
+  cache: false
+---
+
+```{r}
+# Ruta del archivo CSV
+csv_path <- "/mnt/data/s14_glucosa_circun.csv"
+
+# Cargar librerías
+if (!requireNamespace("tidyverse", quietly = TRUE)) install.packages("tidyverse")
+library(tidyverse)
+
+# Lectura de datos
+glc <- read_csv(csv_path)
+
+# Vista general
+glimpse(glc)
+summary(glc)
+```
+
+# Preprocesamiento
+```{r}
+# Valores faltantes
+sapply(glc, function(x) sum(is.na(x)))
+
+# Identificar variables numéricas y categóricas
+num_vars <- glc %>% select(where(is.numeric)) %>% names()
+cat_vars <- glc %>% select(where(is.character)) %>% names()
+
+head(glc)
+```
+
+# Visualizaciones básicas
+```{r}
+# Histograma de la primera variable numérica
+if (length(num_vars) > 0) {
+  ggplot(glc, aes(.data[[num_vars[1]]])) +
+    geom_histogram(bins = 30) +
+    labs(title = paste("Histograma de", num_vars[1]), x = num_vars[1], y = "Frecuencia")
+}
+```
+
+```{r}
+# Matriz de correlación entre variables numéricas
+if (length(num_vars) > 1) {
+  cor_mat <- glc %>% select(all_of(num_vars)) %>% cor(use = "pairwise.complete.obs")
+  cor_mat
+}
+```
+
+# Modelo predictivo (si existe variable de resultado)
+```{r}
+if ("Outcome" %in% names(glc)) {
+  glc <- glc %>% mutate(Outcome = factor(Outcome))
+
+  set.seed(123)
+  idx <- sample(seq_len(nrow(glc)), size = 0.7*nrow(glc))
+  train <- glc[idx,]
+  test <- glc[-idx,]
+
+  formula_vars <- paste(setdiff(num_vars, "Outcome"), collapse = " + ")
+  glm_formula <- as.formula(paste("Outcome ~", formula_vars))
+
+  model <- glm(glm_formula, data = train, family = binomial)
+  summary(model)
+
+  preds <- ifelse(predict(model, newdata = test, type = "response") > 0.5, 1, 0)
+  table(Predicted = preds, Actual = test$Outcome)
+}
+```
+
+# Notas finales
+Este archivo Quarto analiza el dataset `s14_glucosa_circun.csv`, realiza exploración de datos,
+visualizaciones y un modelo predictivo si hay variable `Outcome`. Ajusta el análisis según tu dataset real.
