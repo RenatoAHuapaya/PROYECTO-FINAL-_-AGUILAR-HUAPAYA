@@ -1,0 +1,83 @@
+---
+title: "Análisis de s10_asma"
+author: "Generado por ChatGPT"
+date: "`r Sys.Date()`"
+format: html
+execute:
+  echo: true
+  warning: false
+  error: false
+  cache: false
+---
+
+```{r}
+# Ruta del archivo CSV
+csv_path <- "/mnt/data/s10_asma.csv"
+
+# Cargar librerías
+if (!requireNamespace("tidyverse", quietly = TRUE)) install.packages("tidyverse")
+library(tidyverse)
+
+# Lectura de datos
+asma <- read_csv(csv_path)
+
+# Vista general
+glimpse(asma)
+summary(asma)
+```
+
+# Preprocesamiento
+```{r}
+# Valores faltantes
+sapply(asma, function(x) sum(is.na(x)))
+
+# Identificar variables numéricas y categóricas
+num_vars <- asma %>% select(where(is.numeric)) %>% names()
+cat_vars <- asma %>% select(where(is.character)) %>% names()
+
+head(asma)
+```
+
+# Visualizaciones básicas
+```{r}
+# Histograma de la primera variable numérica
+if (length(num_vars) > 0) {
+  ggplot(asma, aes(.data[[num_vars[1]]])) +
+    geom_histogram(bins = 30) +
+    labs(title = paste("Histograma de", num_vars[1]), x = num_vars[1], y = "Frecuencia")
+}
+```
+
+```{r}
+# Correlación entre variables numéricas
+if (length(num_vars) > 1) {
+  cor_mat <- asma %>% select(all_of(num_vars)) %>% cor(use = "pairwise.complete.obs")
+  cor_mat
+}
+```
+
+# Modelo predictivo (si existe variable de resultado)
+```{r}
+if ("Outcome" %in% names(asma)) {
+  asma <- asma %>% mutate(Outcome = factor(Outcome))
+
+  set.seed(123)
+  idx <- sample(seq_len(nrow(asma)), size = 0.7*nrow(asma))
+  train <- asma[idx,]
+  test <- asma[-idx,]
+
+  formula_vars <- paste(setdiff(num_vars, "Outcome"), collapse = " + ")
+  glm_formula <- as.formula(paste("Outcome ~", formula_vars))
+
+  model <- glm(glm_formula, data = train, family = binomial)
+  summary(model)
+
+  preds <- ifelse(predict(model, newdata = test, type = "response") > 0.5, 1, 0)
+  table(Predicted = preds, Actual = test$Outcome)
+}
+```
+
+# Notas finales
+Este archivo Quarto analiza el dataset `s10_asma.csv`, realiza exploración inicial,
+visualizaciones básicas y un modelo predictivo si la variable `Outcome` existe. Ajusta las variables
+y análisis según la estructura real de tu dataset.
