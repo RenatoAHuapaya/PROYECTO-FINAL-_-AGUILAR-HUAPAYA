@@ -1,0 +1,83 @@
+---
+title: "Análisis de s12_pred_mort"
+author: "Generado por ChatGPT"
+date: "`r Sys.Date()`"
+format: html
+execute:
+  echo: true
+  warning: false
+  error: false
+  cache: false
+---
+
+```{r}
+# Ruta del archivo CSV
+csv_path <- "/mnt/data/s12_pred_mort.csv"
+
+# Cargar librerías
+if (!requireNamespace("tidyverse", quietly = TRUE)) install.packages("tidyverse")
+library(tidyverse)
+
+# Lectura de datos
+mort <- read_csv(csv_path)
+
+# Vista general
+glimpse(mort)
+summary(mort)
+```
+
+# Preprocesamiento
+```{r}
+# Valores faltantes
+sapply(mort, function(x) sum(is.na(x)))
+
+# Identificar variables numéricas y categóricas
+num_vars <- mort %>% select(where(is.numeric)) %>% names()
+cat_vars <- mort %>% select(where(is.character)) %>% names()
+
+head(mort)
+```
+
+# Visualizaciones básicas
+```{r}
+# Histograma de la primera variable numérica
+if (length(num_vars) > 0) {
+  ggplot(mort, aes(.data[[num_vars[1]]])) +
+    geom_histogram(bins = 30) +
+    labs(title = paste("Histograma de", num_vars[1]), x = num_vars[1], y = "Frecuencia")
+}
+```
+
+```{r}
+# Matriz de correlación
+if (length(num_vars) > 1) {
+  cor_mat <- mort %>% select(all_of(num_vars)) %>% cor(use = "pairwise.complete.obs")
+  cor_mat
+}
+```
+
+# Modelo predictivo (si existe la variable Outcome)
+```{r}
+if ("Outcome" %in% names(mort)) {
+  mort <- mort %>% mutate(Outcome = factor(Outcome))
+
+  set.seed(123)
+  idx <- sample(seq_len(nrow(mort)), size = 0.7*nrow(mort))
+  train <- mort[idx,]
+  test <- mort[-idx,]
+
+  formula_vars <- paste(setdiff(num_vars, "Outcome"), collapse = " + ")
+  glm_formula <- as.formula(paste("Outcome ~", formula_vars))
+
+  model <- glm(glm_formula, data = train, family = binomial)
+  summary(model)
+
+  preds <- ifelse(predict(model, newdata = test, type = "response") > 0.5, 1, 0)
+  table(Predicted = preds, Actual = test$Outcome)
+}
+```
+
+# Notas finales
+Este archivo Quarto analiza el dataset `s12_pred_mort.csv`, realiza exploración inicial,
+visualizaciones básicas y modelo predictivo si la variable `Outcome` está presente. Ajusta el análisis
+de acuerdo con las variables de tu dataset.
